@@ -102,18 +102,12 @@ class TuCarroScraper(BaseScraper):
                     # Wait for listings to load
                     # TuCarro may use different selectors depending on the page layout
                     # Try both old and new structures
-                    selector_found = False
                     try:
                         await page.wait_for_selector(".ui-search-result, .ui-search-layout__item", timeout=10000)
-                        selector_found = True
                     except PlaywrightTimeout:
                         # No results found or different structure
                         logger.warning(f"No results found for query: {query} (timeout waiting for search results)")
                         print(f"⚠️  No results found for query: {query}")
-                        await browser.close()
-                        return listings
-                    
-                    if not selector_found:
                         await browser.close()
                         return listings
                     
@@ -141,9 +135,7 @@ class TuCarroScraper(BaseScraper):
                                     // Extract title - support multiple selectors
                                     let titleElem = listing.querySelector('h3.poly-component__title-wrapper') ||
                                                    listing.querySelector('h2.ui-search-item__title') ||
-                                                   listing.querySelector('.ui-search-item__title') ||
-                                                   listing.querySelector('h2') ||
-                                                   listing.querySelector('h3');
+                                                   listing.querySelector('.ui-search-item__title');
                                     const title = titleElem ? titleElem.innerText : '';
                                     
                                     // Extract price - support multiple selectors
@@ -152,11 +144,11 @@ class TuCarroScraper(BaseScraper):
                                                    listing.querySelector('.andes-money-amount');
                                     const price = priceElem ? priceElem.innerText : null;
                                     
-                                    // Extract URL - find first valid link
+                                    // Extract URL - find first valid link to product
                                     let linkElem = listing.querySelector('a[href*="articulo.tucarro"]') ||
+                                                  listing.querySelector('a[href*="/MCO-"]') ||
                                                   listing.querySelector('a.ui-search-link') ||
-                                                  listing.querySelector('a.ui-search-item__group__element') ||
-                                                  listing.querySelector('a[href]');
+                                                  listing.querySelector('a.ui-search-item__group__element');
                                     const url = linkElem ? linkElem.href : '';
                                     
                                     // Extract location if available
