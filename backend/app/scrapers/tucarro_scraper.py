@@ -35,7 +35,8 @@ class TuCarroScraper(BaseScraper):
         Scrape vehicle listings from TuCarro using Playwright.
         
         TuCarro uses JavaScript rendering like MercadoLibre, requiring
-        Playwright to handle dynamic content loading.
+        Playwright to handle dynamic content loading. Includes stealth
+        techniques to avoid 403 Forbidden errors.
         
         Args:
             query: Search query (e.g., "Toyota Corolla 2015")
@@ -48,14 +49,39 @@ class TuCarroScraper(BaseScraper):
         
         try:
             async with async_playwright() as p:
-                # Launch browser in headless mode
-                browser = await p.chromium.launch(headless=True)
+                # Launch browser with anti-detection flags
+                browser = await p.chromium.launch(
+                    headless=True,
+                    args=[
+                        '--disable-blink-features=AutomationControlled',
+                        '--disable-dev-shm-usage',
+                        '--no-sandbox',
+                        '--disable-setuid-sandbox',
+                    ]
+                )
                 
-                # Create context with realistic user agent
+                # Create context with realistic user agent and headers
                 context = await browser.new_context(
                     user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-                    viewport={"width": 1920, "height": 1080}
+                    viewport={"width": 1920, "height": 1080},
+                    locale='es-CO',
+                    timezone_id='America/Bogota',
+                    extra_http_headers={
+                        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+                        'Accept-Language': 'es-CO,es;q=0.9,en;q=0.8',
+                        'Accept-Encoding': 'gzip, deflate, br',
+                        'DNT': '1',
+                        'Connection': 'keep-alive',
+                        'Upgrade-Insecure-Requests': '1',
+                    }
                 )
+                
+                # Remove webdriver property to avoid detection
+                await context.add_init_script("""
+                    Object.defineProperty(navigator, 'webdriver', {
+                        get: () => undefined
+                    });
+                """)
                 
                 page = await context.new_page()
                 
@@ -65,8 +91,22 @@ class TuCarroScraper(BaseScraper):
                     search_query = query.replace(" ", "-").lower()
                     url = f"{self.BASE_URL}/{search_query}_NoIndex_True"
                     
-                    # Navigate to search page
-                    await page.goto(url, wait_until="domcontentloaded", timeout=30000)
+                    # Navigate to search page with error handling
+                    response = await page.goto(url, wait_until="domcontentloaded", timeout=30000)
+                    
+                    # Check response status
+                    if response.status == 403:
+                        # 403 Forbidden - Bot detected
+                        print(f"⚠️  TuCarro returned 403 Forbidden for query: {query}")
+                        print(f"   URL: {url}")
+                        print(f"   Try: Increase SCRAPING_DELAY_MIN/MAX or use proxy rotation")
+                        await browser.close()
+                        return listings
+                    
+                    if response.status != 200:
+                        print(f"⚠️  TuCarro returned status {response.status} for query: {query}")
+                        await browser.close()
+                        return listings
                     
                     # Wait for listings to load
                     # TuCarro uses the same selectors as MercadoLibre (Andes Design System)
@@ -74,6 +114,7 @@ class TuCarroScraper(BaseScraper):
                         await page.wait_for_selector(".ui-search-result", timeout=10000)
                     except PlaywrightTimeout:
                         # No results found or different structure
+                        print(f"⚠️  No results found for query: {query} (timeout waiting for .ui-search-result)")
                         await browser.close()
                         return listings
                     
