@@ -1,5 +1,9 @@
 """
-MercadoLibre Colombia scraper using Playwright for JavaScript rendering.
+TuCarro Colombia scraper using Playwright for JavaScript rendering.
+
+TuCarro is a MercadoLibre brand focused on vehicles in Colombia.
+It uses the same platform and structure as MercadoLibre, so we reuse
+similar scraping logic with a different base URL.
 """
 from typing import List, Dict, Optional
 from playwright.async_api import async_playwright, TimeoutError as PlaywrightTimeout
@@ -7,24 +11,36 @@ from .base_scraper import BaseScraper
 import re
 
 
-class MercadoLibreScraper(BaseScraper):
-    """Scraper for MercadoLibre Colombia marketplace using Playwright."""
+class TuCarroScraper(BaseScraper):
+    """
+    Scraper for TuCarro Colombia marketplace using Playwright.
     
-    BASE_URL = "https://carros.mercadolibre.com.co"
+    TuCarro is part of the MercadoLibre network and uses the same
+    UI/UX structure (Andes Design System), so the scraping logic is
+    very similar to MercadoLibreScraper.
+    
+    Page Structure:
+    - Search bar: Top of page in header
+    - Filters: Left sidebar with collapsible categories
+    - Results: Center/right area with grid of listings
+    """
+    
+    BASE_URL = "https://carros.tucarro.com.co"
     
     def get_source_name(self) -> str:
-        return "MercadoLibre"
+        return "TuCarro"
     
     async def scrape(self, query: str, city: str = "Medellín") -> List[Dict]:
         """
-        Scrape vehicle listings from MercadoLibre using Playwright.
+        Scrape vehicle listings from TuCarro using Playwright.
         
-        This implementation uses Playwright to handle JavaScript-rendered content
-        with stealth techniques to avoid 403 Forbidden errors.
+        TuCarro uses JavaScript rendering like MercadoLibre, requiring
+        Playwright to handle dynamic content loading. Includes stealth
+        techniques to avoid 403 Forbidden errors.
         
         Args:
-            query: Search query
-            city: City to search in
+            query: Search query (e.g., "Toyota Corolla 2015")
+            city: City to search in (default: Medellín)
             
         Returns:
             List of normalized vehicle listings
@@ -71,6 +87,7 @@ class MercadoLibreScraper(BaseScraper):
                 
                 try:
                     # Build search URL
+                    # TuCarro uses the same URL structure as MercadoLibre
                     search_query = query.replace(" ", "-").lower()
                     url = f"{self.BASE_URL}/{search_query}_NoIndex_True"
                     
@@ -80,18 +97,19 @@ class MercadoLibreScraper(BaseScraper):
                     # Check response status
                     if response.status == 403:
                         # 403 Forbidden - Bot detected
-                        print(f"⚠️  MercadoLibre returned 403 Forbidden for query: {query}")
+                        print(f"⚠️  TuCarro returned 403 Forbidden for query: {query}")
                         print(f"   URL: {url}")
                         print(f"   Try: Increase SCRAPING_DELAY_MIN/MAX or use proxy rotation")
                         await browser.close()
                         return listings
                     
                     if response.status != 200:
-                        print(f"⚠️  MercadoLibre returned status {response.status} for query: {query}")
+                        print(f"⚠️  TuCarro returned status {response.status} for query: {query}")
                         await browser.close()
                         return listings
                     
-                    # Wait for listings to load (adjust selector based on actual site)
+                    # Wait for listings to load
+                    # TuCarro uses the same selectors as MercadoLibre (Andes Design System)
                     try:
                         await page.wait_for_selector(".ui-search-result", timeout=10000)
                     except PlaywrightTimeout:
@@ -108,7 +126,7 @@ class MercadoLibreScraper(BaseScraper):
                             const listings = document.querySelectorAll('.ui-search-result');
                             
                             listings.forEach((listing, index) => {
-                                if (index >= 20) return; // Limit to 20
+                                if (index >= 20) return; // Limit to 20 results
                                 
                                 try {
                                     // Extract title
@@ -179,13 +197,13 @@ class MercadoLibreScraper(BaseScraper):
                     
                 except Exception as e:
                     # Log errors for debugging
-                    print(f"⚠️  Error during MercadoLibre scraping: {e}")
+                    print(f"⚠️  Error during TuCarro scraping: {e}")
                 finally:
                     await browser.close()
                     
         except Exception as e:
             # Log top-level errors
-            print(f"⚠️  MercadoLibre scraper initialization error: {e}")
+            print(f"⚠️  TuCarro scraper initialization error: {e}")
         
         return listings
     
@@ -226,4 +244,3 @@ class MercadoLibreScraper(BaseScraper):
                 return city
         
         return location.split(',')[0].strip() if location else default_city
-
