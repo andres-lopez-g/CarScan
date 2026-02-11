@@ -4,7 +4,7 @@ TuCarro Colombia scraper using Playwright for JavaScript rendering.
 TuCarro is MercadoLibre's vehicle marketplace in Colombia.
 This scraper handles the 403 Forbidden error by using proper headers and user agent.
 """
-from typing import List, Dict
+from typing import List, Dict, Optional
 from playwright.async_api import async_playwright, TimeoutError as PlaywrightTimeout
 from .base_scraper import BaseScraper
 import re
@@ -210,8 +210,8 @@ class TuCarroScraper(BaseScraper):
     
     def _extract_mileage_from_text(self, text: str) -> Optional[int]:
         """Extract mileage from text using regex."""
-        # Look for numbers followed by km
-        mileage_pattern = r'(\d{1,3}(?:[.,]\d{3})*)\s*(?:km|kilómetros|kilometros)'
+        # Look for numbers followed by km (with or without separators)
+        mileage_pattern = r'(\d{1,3}(?:[.,]\d{3})*|\d+)\s*(?:km|kilómetros|kilometros)'
         match = re.search(mileage_pattern, text, re.IGNORECASE)
         if match:
             mileage_str = match.group(1).replace('.', '').replace(',', '')
