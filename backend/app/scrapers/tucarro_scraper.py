@@ -4,7 +4,7 @@ TuCarro Colombia scraper using Playwright for JavaScript rendering.
 TuCarro is MercadoLibre's vehicle marketplace in Colombia.
 This scraper handles the 403 Forbidden error by using proper headers and user agent.
 """
-from typing import List, Dict
+from typing import List, Dict, Optional
 from playwright.async_api import async_playwright, TimeoutError as PlaywrightTimeout
 from .base_scraper import BaseScraper
 import re
@@ -100,61 +100,84 @@ class TuCarroScraper(BaseScraper):
                         return listings
                     
                     # Wait for listings to load
-                    # TuCarro uses the same selectors as MercadoLibre (Andes Design System)
+                    # TuCarro may use different selectors depending on the page layout
+                    # Try both old and new structures
                     try:
-                        await page.wait_for_selector(".ui-search-result", timeout=10000)
+                        await page.wait_for_selector(".ui-search-result, .ui-search-layout__item", timeout=10000)
                     except PlaywrightTimeout:
                         # No results found or different structure
-                        print(f"⚠️  No results found for query: {query} (timeout waiting for .ui-search-result)")
+                        logger.warning(f"No results found for query: {query} (timeout waiting for search results)")
+                        print(f"⚠️  No results found for query: {query}")
                         await browser.close()
                         return listings
                     
                     # Extract listings using JavaScript evaluation
                     # This is more reliable than parsing HTML
+                    # Support both old (.ui-search-result) and new (.ui-search-layout__item) structures
                     items_data = await page.evaluate("""
                         () => {
                             const items = [];
-                            const listings = document.querySelectorAll('.ui-search-result');
+                            
+                            // Try new structure first (ui-search-layout__item)
+                            let listings = document.querySelectorAll('.ui-search-layout__item');
+                            
+                            // Fallback to old structure
+                            if (listings.length === 0) {
+                                listings = document.querySelectorAll('.ui-search-result');
+                            }
+                            
+                            console.log(`Found ${listings.length} listings`);
                             
                             listings.forEach((listing, index) => {
                                 if (index >= 20) return; // Limit to 20 results
                                 
                                 try {
-                                    // Extract title
-                                    const titleElem = listing.querySelector('h2.ui-search-item__title, .ui-search-item__title');
+                                    // Extract title - support multiple selectors
+                                    const titleElem = listing.querySelector('h3.poly-component__title-wrapper') ||
+                                                   listing.querySelector('h2.ui-search-item__title') ||
+                                                   listing.querySelector('.ui-search-item__title');
                                     const title = titleElem ? titleElem.innerText : '';
                                     
-                                    // Extract price
-                                    const priceElem = listing.querySelector('.andes-money-amount__fraction, .price-tag-fraction');
+                                    // Extract price - support multiple selectors
+                                    const priceElem = listing.querySelector('.andes-money-amount__fraction') ||
+                                                   listing.querySelector('.price-tag-fraction') ||
+                                                   listing.querySelector('.andes-money-amount');
                                     const price = priceElem ? priceElem.innerText : null;
                                     
-                                    // Extract URL
-                                    const linkElem = listing.querySelector('a.ui-search-link, a.ui-search-item__group__element');
+                                    // Extract URL - find first valid link to product
+                                    const linkElem = listing.querySelector('a[href*="articulo.tucarro"]') ||
+                                                  listing.querySelector('a[href*="/MCO-"]') ||
+                                                  listing.querySelector('a.ui-search-link') ||
+                                                  listing.querySelector('a.ui-search-item__group__element');
                                     const url = linkElem ? linkElem.href : '';
                                     
                                     // Extract location if available
-                                    const locationElem = listing.querySelector('.ui-search-item__group--location, .ui-search-item__location');
+                                    const locationElem = listing.querySelector('.ui-search-item__group--location') ||
+                                                       listing.querySelector('.ui-search-item__location');
                                     const location = locationElem ? locationElem.innerText : '';
                                     
-                                    // Try to extract year and mileage from title or attributes
-                                    const attributes = listing.querySelector('.ui-search-item__group--attributes');
-                                    const attributesText = attributes ? attributes.innerText : '';
+                                    // Get all text for attribute extraction
+                                    const allText = listing.innerText || '';
                                     
                                     items.push({
                                         title: title,
                                         price: price,
                                         url: url,
                                         location: location,
-                                        attributes: attributesText
+                                        attributes: allText
                                     });
                                 } catch (e) {
+                                    console.error('Error processing listing:', e);
                                     // Skip problematic items
                                 }
                             });
                             
+                            console.log(`Extracted ${items.length} items`);
                             return items;
                         }
                     """)
+                    
+                    logger.info(f"Extracted {len(items_data)} items from TuCarro for query: {query}")
                     
                     # Process extracted data
                     for item_data in items_data:
@@ -188,14 +211,17 @@ class TuCarroScraper(BaseScraper):
                     
                 except Exception as e:
                     # Log errors for debugging
+                    logger.error(f"Error during TuCarro scraping: {e}", exc_info=True)
                     print(f"⚠️  Error during TuCarro scraping: {e}")
                 finally:
                     await browser.close()
-                    
+                
         except Exception as e:
             # Log top-level errors
+            logger.error(f"TuCarro scraper initialization error: {e}", exc_info=True)
             print(f"⚠️  TuCarro scraper initialization error: {e}")
         
+        logger.info(f"TuCarro scraper completed. Returning {len(listings)} listings.")
         return listings
     
     def _extract_year_from_text(self, text: str) -> Optional[int]:
@@ -210,8 +236,8 @@ class TuCarroScraper(BaseScraper):
     
     def _extract_mileage_from_text(self, text: str) -> Optional[int]:
         """Extract mileage from text using regex."""
-        # Look for numbers followed by km
-        mileage_pattern = r'(\d{1,3}(?:[.,]\d{3})*)\s*(?:km|kilómetros|kilometros)'
+        # Look for numbers followed by km (with or without separators)
+        mileage_pattern = r'(\d{1,3}(?:[.,]\d{3})*|\d+)\s*(?:km|kilómetros|kilometros)'
         match = re.search(mileage_pattern, text, re.IGNORECASE)
         if match:
             mileage_str = match.group(1).replace('.', '').replace(',', '')
