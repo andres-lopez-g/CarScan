@@ -20,9 +20,8 @@ Build a FastAPI-based backend and a React/Next.js frontend that:
 
 ## MVP SCOPE
 - One city (e.g. Medellín)
-- Two sources:
+- One source:
   - MercadoLibre Colombia
-  - OLX Colombia
 - No authentication
 - No payments
 - Map + list view
