@@ -217,6 +217,8 @@ Current MVP includes:
 
 - [x] TuCarro marketplace integration
 - [ ] Additional marketplaces (Fincaraíz, OLX)
+- [x] Additional marketplace - TuCarro integrated
+- [ ] More marketplaces (Fincaraíz)
 - [ ] More cities and regions
 - [ ] User authentication
 - [ ] Saved searches
