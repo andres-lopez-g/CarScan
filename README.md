@@ -15,7 +15,7 @@ CarScan is a production-ready web application that aggregates vehicle listings (
 - **Price Comparison**: Normalizes prices and ranks listings by best offer
 - **Geospatial Search**: Calculate distances from your location
 - **Interactive Map**: View listings on OpenStreetMap with Leaflet.js
-- **Real-time Scraping**: Responsible web scraping with rate limiting
+- **Real-time Scraping**: Responsible web scraping with rate limiting and proper headers to avoid 403 errors
 - **Advanced Filtering**: Filter by price, year, mileage, and location
 - **Smart Scoring**: AI-powered scoring algorithm to find the best deals
 
@@ -215,6 +215,8 @@ Current MVP includes:
 
 ## 🚧 Future Enhancements
 
+- [x] TuCarro marketplace integration
+- [ ] Additional marketplaces (Fincaraíz, OLX)
 - [x] Additional marketplace - TuCarro integrated
 - [ ] More marketplaces (Fincaraíz)
 - [ ] More cities and regions

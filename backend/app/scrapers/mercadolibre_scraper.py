@@ -5,6 +5,9 @@ from typing import List, Dict, Optional
 from playwright.async_api import async_playwright, TimeoutError as PlaywrightTimeout
 from .base_scraper import BaseScraper
 import re
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class MercadoLibreScraper(BaseScraper):
@@ -178,14 +181,14 @@ class MercadoLibreScraper(BaseScraper):
                         await self.delay()
                     
                 except Exception as e:
-                    # Log errors for debugging
-                    print(f"⚠️  Error during MercadoLibre scraping: {e}")
+                    # Log error for debugging but continue execution
+                    logger.error(f"Error during MercadoLibre scraping: {str(e)}", exc_info=True)
                 finally:
                     await browser.close()
                     
         except Exception as e:
-            # Log top-level errors
-            print(f"⚠️  MercadoLibre scraper initialization error: {e}")
+            # Log error for debugging but return empty list to allow other scrapers to continue
+            logger.error(f"Failed to initialize MercadoLibre scraper: {str(e)}", exc_info=True)
         
         return listings
     

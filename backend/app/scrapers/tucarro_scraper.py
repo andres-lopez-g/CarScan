@@ -1,31 +1,22 @@
 """
 TuCarro Colombia scraper using Playwright for JavaScript rendering.
 
-TuCarro is a MercadoLibre brand focused on vehicles in Colombia.
-It uses the same platform and structure as MercadoLibre, so we reuse
-similar scraping logic with a different base URL.
+TuCarro is MercadoLibre's vehicle marketplace in Colombia.
+This scraper handles the 403 Forbidden error by using proper headers and user agent.
 """
-from typing import List, Dict, Optional
+from typing import List, Dict
 from playwright.async_api import async_playwright, TimeoutError as PlaywrightTimeout
 from .base_scraper import BaseScraper
 import re
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class TuCarroScraper(BaseScraper):
-    """
-    Scraper for TuCarro Colombia marketplace using Playwright.
+    """Scraper for TuCarro Colombia marketplace using Playwright."""
     
-    TuCarro is part of the MercadoLibre network and uses the same
-    UI/UX structure (Andes Design System), so the scraping logic is
-    very similar to MercadoLibreScraper.
-    
-    Page Structure:
-    - Search bar: Top of page in header
-    - Filters: Left sidebar with collapsible categories
-    - Results: Center/right area with grid of listings
-    """
-    
-    BASE_URL = "https://carros.tucarro.com.co"
+    BASE_URL = "https://vehiculos.tucarro.com.co"
     
     def get_source_name(self) -> str:
         return "TuCarro"
