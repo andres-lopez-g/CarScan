@@ -133,28 +133,28 @@ class TuCarroScraper(BaseScraper):
                                 
                                 try {
                                     // Extract title - support multiple selectors
-                                    let titleElem = listing.querySelector('h3.poly-component__title-wrapper') ||
+                                    const titleElem = listing.querySelector('h3.poly-component__title-wrapper') ||
                                                    listing.querySelector('h2.ui-search-item__title') ||
                                                    listing.querySelector('.ui-search-item__title');
                                     const title = titleElem ? titleElem.innerText : '';
                                     
                                     // Extract price - support multiple selectors
-                                    let priceElem = listing.querySelector('.andes-money-amount__fraction') ||
+                                    const priceElem = listing.querySelector('.andes-money-amount__fraction') ||
                                                    listing.querySelector('.price-tag-fraction') ||
                                                    listing.querySelector('.andes-money-amount');
                                     const price = priceElem ? priceElem.innerText : null;
                                     
                                     // Extract URL - find first valid link to product
-                                    let linkElem = listing.querySelector('a[href*="articulo.tucarro"]') ||
+                                    const linkElem = listing.querySelector('a[href*="articulo.tucarro"]') ||
                                                   listing.querySelector('a[href*="/MCO-"]') ||
                                                   listing.querySelector('a.ui-search-link') ||
                                                   listing.querySelector('a.ui-search-item__group__element');
                                     const url = linkElem ? linkElem.href : '';
                                     
                                     // Extract location if available
-                                    let locationElem = listing.querySelector('.ui-search-item__group--location') ||
-                                                      listing.querySelector('.ui-search-item__location');
-                                    let location = locationElem ? locationElem.innerText : '';
+                                    const locationElem = listing.querySelector('.ui-search-item__group--location') ||
+                                                       listing.querySelector('.ui-search-item__location');
+                                    const location = locationElem ? locationElem.innerText : '';
                                     
                                     // Get all text for attribute extraction
                                     const allText = listing.innerText || '';
