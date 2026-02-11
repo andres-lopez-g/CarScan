@@ -9,7 +9,7 @@ from geoalchemy2.elements import WKTElement
 
 from app.models.vehicle import VehicleListing, Search
 from app.schemas.vehicle import VehicleListingCreate, SearchRequest
-from app.scrapers import MercadoLibreScraper
+from app.scrapers import MercadoLibreScraper, TuCarroScraper
 import asyncio
 
 
@@ -20,6 +20,7 @@ class VehicleService:
         self.db = db
         self.scrapers = [
             MercadoLibreScraper(),
+            TuCarroScraper(),
         ]
     
     async def search_vehicles(
