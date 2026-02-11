@@ -1,7 +1,7 @@
 """
 MercadoLibre Colombia scraper using Playwright for JavaScript rendering.
 """
-from typing import List, Dict
+from typing import List, Dict, Optional
 from playwright.async_api import async_playwright, TimeoutError as PlaywrightTimeout
 from .base_scraper import BaseScraper
 import re
@@ -178,18 +178,18 @@ class MercadoLibreScraper(BaseScraper):
                         await self.delay()
                     
                 except Exception as e:
-                    # Log error in production
-                    pass
+                    # Log errors for debugging
+                    print(f"⚠️  Error during MercadoLibre scraping: {e}")
                 finally:
                     await browser.close()
                     
         except Exception as e:
-            # Log error in production
-            pass
+            # Log top-level errors
+            print(f"⚠️  MercadoLibre scraper initialization error: {e}")
         
         return listings
     
-    def _extract_year_from_text(self, text: str) -> int | None:
+    def _extract_year_from_text(self, text: str) -> Optional[int]:
         """Extract year from text using regex."""
         # Look for 4-digit years between 1900 and 2030
         year_pattern = r'\b(19[0-9]{2}|20[0-2][0-9]|2030)\b'
@@ -199,7 +199,7 @@ class MercadoLibreScraper(BaseScraper):
             return year
         return None
     
-    def _extract_mileage_from_text(self, text: str) -> int | None:
+    def _extract_mileage_from_text(self, text: str) -> Optional[int]:
         """Extract mileage from text using regex."""
         # Look for numbers followed by km
         mileage_pattern = r'(\d{1,3}(?:[.,]\d{3})*)\s*(?:km|kilómetros|kilometros)'
