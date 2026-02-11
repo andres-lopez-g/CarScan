@@ -151,7 +151,7 @@ GET /health
 ## 🎯 How It Works
 
 1. **User submits a search query** (e.g., "Toyota Corolla 2015")
-2. **Backend triggers scrapers** for MercadoLibre and OLX
+2. **Backend triggers scraper** for MercadoLibre
 3. **Data is normalized** and stored in PostgreSQL
 4. **Scoring algorithm** calculates best offer scores:
    - Price (50% weight)
