@@ -42,6 +42,7 @@ class SearchRequest(BaseModel):
     """Schema for vehicle search request."""
     
     query: str = Field(..., description="Search query (e.g., 'Toyota Corolla 2015')")
+    search_type: str = Field("vehicles", description="Type of search: 'vehicles' or 'properties'")
     user_lat: Optional[float] = Field(None, ge=-90, le=90, description="User latitude")
     user_lon: Optional[float] = Field(None, ge=-180, le=180, description="User longitude")
     max_distance_km: Optional[int] = Field(50, ge=1, le=500, description="Max search radius in km")

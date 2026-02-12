@@ -2,7 +2,7 @@
 Vehicle service for business logic and data operations.
 """
 from typing import List, Optional
-from sqlalchemy import select, func, and_, or_
+from sqlalchemy import select, func, and_, or_, delete
 from sqlalchemy.ext.asyncio import AsyncSession
 from geoalchemy2.functions import ST_DWithin, ST_Distance, ST_MakePoint
 from geoalchemy2.elements import WKTElement
@@ -18,12 +18,15 @@ class VehicleService:
     
     def __init__(self, db: AsyncSession):
         self.db = db
-        self.scrapers = [
+        # Scrapers organized by type
+        self.vehicle_scrapers = [
             MercadoLibreScraper(),
             TuCarroScraper(),
+            VendeTuNaveScraper(),
+        ]
+        self.property_scrapers = [
             BodegasYLocalesScraper(),
             FincaRaizScraper(),
-            VendeTuNaveScraper(),
         ]
     
     async def search_vehicles(
@@ -39,8 +42,15 @@ class VehicleService:
         Returns:
             Tuple of (listings, total_count)
         """
+        # Clear previous listings to show only current search results
+        await self.db.execute(delete(VehicleListing))
+        await self.db.commit()
+        
+        # Select scrapers based on search type
+        scrapers = self.vehicle_scrapers if search_request.search_type == "vehicles" else self.property_scrapers
+        
         # First, trigger scraping for new listings
-        await self._scrape_all_sources(search_request.query, search_request.city)
+        await self._scrape_all_sources(search_request.query, search_request.city, scrapers)
         
         # Build query filters
         query = select(VehicleListing)
@@ -108,18 +118,20 @@ class VehicleService:
         
         return listings, len(listings)
     
-    async def _scrape_all_sources(self, query: str, city: Optional[str] = None):
+    async def _scrape_all_sources(self, query: str, city: Optional[str] = None, scrapers: list = None):
         """
         Scrape all configured marketplace sources.
         
         Args:
             query: Search query
             city: City to search in
+            scrapers: List of scrapers to use
         """
         city = city or "Medellín"
+        scrapers = scrapers or self.vehicle_scrapers
         
         # Run all scrapers concurrently
-        tasks = [scraper.scrape(query, city) for scraper in self.scrapers]
+        tasks = [scraper.scrape(query, city) for scraper in scrapers]
         results = await asyncio.gather(*tasks, return_exceptions=True)
         
         # Process and save listings
