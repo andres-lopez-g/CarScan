@@ -226,6 +226,11 @@ Current MVP includes:
 - [ ] Advanced filters (brand, model, transmission)
 - [ ] Favorites and comparisons
 - [ ] Mobile app
+- [ ] https://www.bodegasylocales.com
+- [ ] https://www.fincaraiz.com.co/arriendo/bodegas
+- [ ] mercadolibre
+- [ ] vendetunave
+- [ ] 
 
 ## 🤝 Contributing
 
