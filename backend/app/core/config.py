@@ -14,7 +14,7 @@ class Settings(BaseSettings):
     debug: bool = False
     
     # Database
-    database_url: str = "postgresql+asyncpg://carscan:carscan@db:5432/carscan"
+    database_url: str = "postgresql+asyncpg://carscan:admin@db:5432/carscan"
     
     # Redis
     redis_url: str = "redis://redis:6379/0"

@@ -6,7 +6,7 @@ services:
     environment:
       POSTGRES_DB: carscan
       POSTGRES_USER: carscan
-      POSTGRES_PASSWORD: carscan
+      POSTGRES_PASSWORD: admin
     ports:
       - "5432:5432"
     volumes:
@@ -39,7 +39,7 @@ services:
     container_name: carscan_backend
     platform: linux/amd64
     environment:
-      - DATABASE_URL=postgresql+asyncpg://carscan:carscan@db:5432/carscan
+      - DATABASE_URL=postgresql+asyncpg://carscan:admin@db:5432/carscan
       - REDIS_URL=redis://redis:6379/0
       - DEBUG=true
       - PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
