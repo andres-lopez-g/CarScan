@@ -11,7 +11,7 @@ CarScan is a production-ready web application that aggregates vehicle listings (
 
 ## 🚀 Features
 
-- **Multi-Source Aggregation**: Searches MercadoLibre Colombia and TuCarro
+- **Multi-Source Aggregation**: Searches MercadoLibre Colombia, TuCarro, VendeTuNave, FincaRaiz, and BodegasYLocales
 - **Price Comparison**: Normalizes prices and ranks listings by best offer
 - **Geospatial Search**: Calculate distances from your location
 - **Interactive Map**: View listings on OpenStreetMap with Leaflet.js
@@ -216,9 +216,10 @@ Current MVP includes:
 ## 🚧 Future Enhancements
 
 - [x] TuCarro marketplace integration
-- [ ] Additional marketplaces (Fincaraíz, OLX)
 - [x] Additional marketplace - TuCarro integrated
-- [ ] More marketplaces (Fincaraíz)
+- [x] BodegasYLocales marketplace integration
+- [x] FincaRaiz marketplace integration (warehouse rentals)
+- [x] VendeTuNave marketplace integration
 - [ ] More cities and regions
 - [ ] User authentication
 - [ ] Saved searches
@@ -226,6 +227,7 @@ Current MVP includes:
 - [ ] Advanced filters (brand, model, transmission)
 - [ ] Favorites and comparisons
 - [ ] Mobile app
+- [ ] OLX marketplace integration
 
 ## 🤝 Contributing
 
