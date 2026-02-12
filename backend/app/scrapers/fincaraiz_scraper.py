@@ -196,11 +196,14 @@ class FincaRaizScraper(BaseScraper):
                                 item_data.get('attributes', '')
                             )
                             
+                            # NOTE: For property listings, we repurpose the 'mileage' field 
+                            # to store area (m²) since the current schema is vehicle-focused.
+                            # A future enhancement could add a dedicated 'area' field.
                             listing = {
                                 "title": item_data.get("title", ""),
                                 "price": item_data.get("price"),
                                 "year": None,  # Properties don't have year
-                                "mileage": area,  # Use mileage field for area (m2)
+                                "mileage": area,  # Repurposed for area (m²) in property listings
                                 "latitude": None,
                                 "longitude": None,
                                 "city": self._extract_city_from_location(item_data.get("location", ""), city),
