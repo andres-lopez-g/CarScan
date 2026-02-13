@@ -2,6 +2,19 @@ import React, { useState } from "react";
 import Head from "next/head";
 import dynamic from "next/dynamic";
 import styles from "../styles/Home.module.css";
+import {
+  CarIcon,
+  BuildingIcon,
+  BoltIcon,
+  SearchIcon,
+  MapPinIcon,
+  LayersIcon,
+  CalendarIcon,
+  RoadIcon,
+  GlobeIcon,
+  RulerIcon,
+  ArrowRightIcon,
+} from "../components/Icons";
 
 // Dynamically import Map component (client-side only)
 const MapView = dynamic(() => import("../components/MapView"), {
@@ -44,7 +57,7 @@ export default function Home() {
       const data = await response.json();
       setListings(data.listings || []);
     } catch (err) {
-      setError("Error searching vehicles. Please try again.");
+      setError("Error al buscar. Por favor intenta de nuevo.");
       console.error(err);
     } finally {
       setLoading(false);
@@ -54,67 +67,131 @@ export default function Home() {
   return (
     <div className={styles.container}>
       <Head>
-        <title>CarScan - Vehicle Listing Aggregator</title>
+        <title>CarScan — Encuentra los mejores vehículos en Colombia</title>
         <meta
           name="description"
-          content="Find the best vehicle deals in Colombia"
+          content="Busca y compara vehículos y propiedades en los principales marketplaces colombianos"
         />
         <link rel="icon" href="/favicon.ico" />
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link
+          rel="preconnect"
+          href="https://fonts.gstatic.com"
+          crossOrigin="anonymous"
+        />
       </Head>
 
-      <main className={styles.main}>
-        <h1 className={styles.title}>
-          Welcome to <span className={styles.brand}>CarScan</span>
-        </h1>
-
-        <p className={styles.description}>
-          Find the best deals across Colombian marketplaces
-        </p>
-
-        <div className={styles.searchTypeSelector}>
-          <button
-            type="button"
-            className={`${styles.typeButton} ${searchType === "vehicles" ? styles.typeButtonActive : ""}`}
-            onClick={() => setSearchType("vehicles")}
-          >
-            🚗 Vehículos
-          </button>
-          <button
-            type="button"
-            className={`${styles.typeButton} ${searchType === "properties" ? styles.typeButtonActive : ""}`}
-            onClick={() => setSearchType("properties")}
-          >
-            🏢 Propiedades
-          </button>
+      {/* Navbar */}
+      <nav className={styles.navbar}>
+        <div className={styles.navLogo}>
+          <span className={styles.navLogoIcon}>◈</span>
+          Car<span className={styles.navLogoAccent}>Scan</span>
         </div>
-
-        <form onSubmit={handleSearch} className={styles.searchForm}>
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder={
-              searchType === "vehicles"
-                ? "Buscar vehículos (ej: Toyota Corolla 2015)"
-                : "Buscar propiedades (ej: bodega Medellín)"
-            }
-            className={styles.searchInput}
-            required
-          />
-          <button
-            type="submit"
-            className={styles.searchButton}
-            disabled={loading}
+        <div className={styles.navLinks}>
+          <a href="#search" className={styles.navLink}>
+            Buscar
+          </a>
+          <a href="#features" className={styles.navLink}>
+            Características
+          </a>
+          <a
+            href="https://github.com/andres-lopez-g/CarScan"
+            target="_blank"
+            rel="noopener noreferrer"
+            className={styles.navLink}
           >
-            {loading ? "Searching..." : "Search"}
-          </button>
-        </form>
+            GitHub
+          </a>
+        </div>
+      </nav>
 
+      <main className={styles.main}>
+        {/* Hero */}
+        <section className={styles.heroSection} id="search">
+          <span className={styles.badge}>
+            <BoltIcon size={14} /> Búsqueda en tiempo real
+          </span>
+
+          <h1 className={styles.title}>
+            {searchType === "vehicles"
+              ? "Encuentra tu próximo"
+              : "Encuentra tu próxima"}
+            <br />
+            <span className={styles.brand}>
+              {searchType === "vehicles" ? "vehículo ideal" : "propiedad ideal"}
+            </span>
+          </h1>
+
+          <p className={styles.description}>
+            {searchType === "vehicles"
+              ? "Busca y compara vehículos en los principales marketplaces de Colombia. Todo en un solo lugar."
+              : "Explora bodegas, locales y propiedades comerciales en Colombia. Sin complicaciones."}
+          </p>
+
+          {/* Type toggle */}
+          <div className={styles.searchTypeSelector}>
+            <button
+              type="button"
+              className={`${styles.typeButton} ${searchType === "vehicles" ? styles.typeButtonActive : ""}`}
+              onClick={() => setSearchType("vehicles")}
+            >
+              <CarIcon size={16} /> Vehículos
+            </button>
+            <button
+              type="button"
+              className={`${styles.typeButton} ${searchType === "properties" ? styles.typeButtonActive : ""}`}
+              onClick={() => setSearchType("properties")}
+            >
+              <BuildingIcon size={16} /> Propiedades
+            </button>
+          </div>
+
+          {/* Search */}
+          <form onSubmit={handleSearch} className={styles.searchForm}>
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder={
+                searchType === "vehicles"
+                  ? "Buscar vehículos (ej: Toyota Corolla 2015)"
+                  : "Buscar propiedades (ej: bodega Medellín)"
+              }
+              className={styles.searchInput}
+              required
+            />
+            <button
+              type="submit"
+              className={styles.searchButton}
+              disabled={loading}
+            >
+              {loading ? "Buscando..." : "Buscar"}
+            </button>
+          </form>
+        </section>
+
+        {/* Loading */}
+        {loading && (
+          <div className={styles.loadingContainer}>
+            <div className={styles.spinner} />
+            <p className={styles.loadingText}>
+              Buscando en todos los marketplaces...
+            </p>
+          </div>
+        )}
+
+        {/* Error */}
         {error && <p className={styles.error}>{error}</p>}
 
+        {/* Results */}
         {listings.length > 0 && (
           <div className={styles.results}>
-            <h2>Found {listings.length} listings</h2>
+            <div className={styles.resultsHeader}>
+              <h2>Resultados</h2>
+              <span className={styles.resultsCount}>
+                {listings.length} anuncios encontrados
+              </span>
+            </div>
 
             <div className={styles.mapContainer}>
               <MapView listings={listings} />
@@ -128,18 +205,32 @@ export default function Home() {
                     ${listing.price.toLocaleString("es-CO")} COP
                   </p>
                   <div className={styles.details}>
-                    {listing.year && <span>Year: {listing.year}</span>}
-                    {listing.mileage && (
-                      <span>
-                        Mileage: {listing.mileage.toLocaleString()} km
+                    {listing.year && (
+                      <span className={styles.detailTag}>
+                        <CalendarIcon size={13} /> {listing.year}
                       </span>
                     )}
-                    {listing.city && <span>City: {listing.city}</span>}
-                    {listing.source && <span>Source: {listing.source}</span>}
+                    {listing.mileage && (
+                      <span className={styles.detailTag}>
+                        <RoadIcon size={13} />{" "}
+                        {listing.mileage.toLocaleString()} km
+                      </span>
+                    )}
+                    {listing.city && (
+                      <span className={styles.detailTag}>
+                        <MapPinIcon size={13} /> {listing.city}
+                      </span>
+                    )}
+                    {listing.source && (
+                      <span className={styles.detailTag}>
+                        <GlobeIcon size={13} /> {listing.source}
+                      </span>
+                    )}
                   </div>
                   {listing.distance_km && (
                     <p className={styles.distance}>
-                      Distance: {listing.distance_km.toFixed(1)} km
+                      <RulerIcon size={14} /> {listing.distance_km.toFixed(1)}{" "}
+                      km de distancia
                     </p>
                   )}
                   <a
@@ -148,17 +239,56 @@ export default function Home() {
                     rel="noopener noreferrer"
                     className={styles.viewButton}
                   >
-                    View Original Listing
+                    Ver anuncio <ArrowRightIcon size={14} />
                   </a>
                 </div>
               ))}
             </div>
           </div>
         )}
+
+        {/* Features — shown when no results */}
+        {listings.length === 0 && !loading && (
+          <section className={styles.featuresSection} id="features">
+            <div className={styles.featureCard}>
+              <span className={styles.featureIcon}>
+                <SearchIcon size={22} />
+              </span>
+              <h3 className={styles.featureTitle}>Búsqueda unificada</h3>
+              <p className={styles.featureDesc}>
+                Compara precios de TuCarro, MercadoLibre, FincaRaíz y más en una
+                sola búsqueda.
+              </p>
+            </div>
+            <div className={styles.featureCard}>
+              <span className={styles.featureIcon}>
+                <MapPinIcon size={22} />
+              </span>
+              <h3 className={styles.featureTitle}>Mapa interactivo</h3>
+              <p className={styles.featureDesc}>
+                Visualiza los listados geolocalizados cerca de ti en un mapa
+                interactivo en tiempo real.
+              </p>
+            </div>
+            <div className={styles.featureCard}>
+              <span className={styles.featureIcon}>
+                <LayersIcon size={22} />
+              </span>
+              <h3 className={styles.featureTitle}>Resultados al instante</h3>
+              <p className={styles.featureDesc}>
+                Scraping en tiempo real de múltiples fuentes para que siempre
+                tengas los datos más frescos.
+              </p>
+            </div>
+          </section>
+        )}
       </main>
 
       <footer className={styles.footer}>
-        <p>CarScan © 2024 - Vehicle Listing Aggregator for Colombia</p>
+        <p>
+          <span className={styles.footerAccent}>CarScan</span> © 2024 —
+          Agregador de listados para Colombia
+        </p>
       </footer>
     </div>
   );
