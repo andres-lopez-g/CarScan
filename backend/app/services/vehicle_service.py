@@ -9,7 +9,7 @@ from geoalchemy2.elements import WKTElement
 
 from app.models.vehicle import VehicleListing, Search
 from app.schemas.vehicle import VehicleListingCreate, SearchRequest
-from app.scrapers import MercadoLibreScraper, TuCarroScraper, BodegasYLocalesScraper, FincaRaizScraper, VendeTuNaveScraper
+from app.scrapers import MercadoLibreScraper, TuCarroScraper, BodegasYLocalesScraper, FincaRaizScraper, VendeTuNaveScraper, VendeTuNaveRustScraper
 import asyncio
 
 
@@ -23,6 +23,7 @@ class VehicleService:
             MercadoLibreScraper(),
             TuCarroScraper(),
             VendeTuNaveScraper(),
+            VendeTuNaveRustScraper(),
         ]
         self.property_scrapers = [
             BodegasYLocalesScraper(),
