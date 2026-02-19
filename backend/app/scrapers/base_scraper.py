@@ -20,13 +20,13 @@ class BaseScraper(ABC):
         self.delay_max = settings.scraping_delay_max
     
     @abstractmethod
-    async def scrape(self, query: str, city: str = "Medellín") -> List[Dict]:
+    async def scrape(self, query: str, city: Optional[str] = None) -> List[Dict]:
         """
         Scrape vehicle listings from the marketplace.
         
         Args:
             query: Search query (e.g., "Toyota Corolla 2015")
-            city: City to search in (default: Medellín)
+            city: City to search in. None means nationwide (no city filter).
             
         Returns:
             List of normalized vehicle listing dictionaries

@@ -53,7 +53,7 @@ class VendeTuNaveScraper(BaseScraper):
     def get_source_name(self) -> str:
         return "VendeTuNave"
 
-    async def scrape(self, query: str, city: str = "Medellín") -> List[Dict]:
+    async def scrape(self, query: str, city: Optional[str] = None) -> List[Dict]:
         """
         Scrape vehicle listings from VendeTuNave.
 
@@ -62,7 +62,8 @@ class VendeTuNaveScraper(BaseScraper):
 
         Args:
             query: Search query (e.g., "Toyota Corolla 2015")
-            city: City to search in (default: Medellín)
+            city:  City to search in. When None, omits the `ciudad` URL param
+                   so VendeTuNave returns listings from all cities (nationwide).
 
         Returns:
             List of normalized vehicle listings

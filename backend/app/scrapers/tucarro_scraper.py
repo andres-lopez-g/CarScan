@@ -21,18 +21,20 @@ class TuCarroScraper(BaseScraper):
     def get_source_name(self) -> str:
         return "TuCarro"
     
-    async def scrape(self, query: str, city: str = "Medellín") -> List[Dict]:
+    async def scrape(self, query: str, city: Optional[str] = None) -> List[Dict]:
         """
         Scrape vehicle listings from TuCarro using Playwright.
-        
+
         TuCarro uses JavaScript rendering like MercadoLibre, requiring
         Playwright to handle dynamic content loading. Includes stealth
         techniques to avoid 403 Forbidden errors.
-        
+
         Args:
-            query: Search query (e.g., "Toyota Corolla 2015")
-            city: City to search in (default: Medellín)
-            
+            query:  Search query (e.g., "Toyota Corolla 2015")
+            city:   City to search in.  When None, scrapes nationwide (TuCarro's
+                    URL doesn't actually filter by city, so this only affects
+                    the fallback value used when a listing has no location text).
+
         Returns:
             List of normalized vehicle listings
         """
@@ -197,7 +199,9 @@ class TuCarroScraper(BaseScraper):
                                 "mileage": mileage,
                                 "latitude": None,  # Would need geocoding service
                                 "longitude": None,
-                                "city": self._extract_city_from_location(item_data.get("location", ""), city),
+                                "city": self._extract_city_from_location(
+                                    item_data.get("location", ""), city
+                                ),
                                 "url": item_data.get("url", ""),
                             }
                             
@@ -247,17 +251,20 @@ class TuCarroScraper(BaseScraper):
                 pass
         return None
     
-    def _extract_city_from_location(self, location: str, default_city: str) -> str:
+    def _extract_city_from_location(self, location: str, default_city: Optional[str]) -> str:
         """Extract city from location string."""
-        if not location:
-            return default_city
-        
         # Common Colombian cities
-        cities = ['Bogotá', 'Medellín', 'Cali', 'Barranquilla', 'Cartagena', 
+        cities = ['Bogotá', 'Medellín', 'Cali', 'Barranquilla', 'Cartagena',
                   'Bucaramanga', 'Pereira', 'Manizales', 'Armenia', 'Ibagué']
-        
-        for city in cities:
-            if city.lower() in location.lower():
-                return city
-        
-        return location.split(',')[0].strip() if location else default_city
+
+        if location:
+            for city_name in cities:
+                if city_name.lower() in location.lower():
+                    return city_name
+            # Return whatever text is in the location field
+            extracted = location.split(',')[0].strip()
+            if extracted:
+                return extracted
+
+        # Fallback: use supplied default or unknown
+        return default_city or "Colombia"

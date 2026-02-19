@@ -125,15 +125,17 @@ class VehicleService:
     async def _scrape_all_sources(self, query: str, city: Optional[str] = None, scrapers: list = None):
         """
         Scrape all configured marketplace sources.
-        
+
         Args:
             query: Search query
-            city: City to search in
+            city: City to search in. Pass None for a nationwide search — each
+                  scraper handles None gracefully (TuCarro ignores city in its
+                  URL; VendeTuNave fetches all listings regardless).
             scrapers: List of scrapers to use
         """
-        city = city or "Medellín"
+        # Do NOT default city here — None signals 'nationwide' to scrapers.
         scrapers = scrapers or self.vehicle_scrapers
-        
+
         # Run all scrapers concurrently
         tasks = [scraper.scrape(query, city) for scraper in scrapers]
         results = await asyncio.gather(*tasks, return_exceptions=True)

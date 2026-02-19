@@ -35,14 +35,17 @@ export default function Home() {
     setError("");
     setListings([]);
 
-    // When nationwide=false we do a "local" search (no city filter, but could
-    // include user_lat/user_lon in the future). When nationwide=true we
-    // explicitly omit city so the backend doesn't filter by location.
     const body: any = {
       query: searchQuery,
       search_type: searchType,
-      max_distance_km: nationwide ? 5000 : 50,
     };
+
+    // Only add max_distance_km for local searches (schema enforces le=500).
+    // For nationwide we omit it — distance filter only applies when
+    // user_lat/user_lon are provided, which we don't send here.
+    if (!nationwide) {
+      body.max_distance_km = 50;
+    }
 
     try {
       const response = await fetch(
