@@ -50,8 +50,13 @@ class VehicleService:
         # Select scrapers based on search type
         scrapers = self.vehicle_scrapers if search_request.search_type == "vehicles" else self.property_scrapers
         
-        # First, trigger scraping for new listings
+        # Scrape all sources first
         await self._scrape_all_sources(search_request.query, search_request.city, scrapers)
+        
+        # Recalculate ALL scores now that we have the full dataset.
+        # This is critical: scores calculated during saving are inaccurate because
+        # min/max values change as each listing is added. A batch recalc fixes this.
+        await self._recalculate_all_scores()
         
         # Build query filters
         query = select(VehicleListing)
@@ -79,13 +84,10 @@ class VehicleService:
         
         # Location-based filtering
         if search_request.user_lat and search_request.user_lon:
-            # Create user location point
             user_point = WKTElement(
                 f'POINT({search_request.user_lon} {search_request.user_lat})',
                 srid=4326
             )
-            
-            # Filter by distance
             distance_meters = search_request.max_distance_km * 1000
             filters.append(
                 ST_DWithin(
@@ -99,7 +101,8 @@ class VehicleService:
         if filters:
             query = query.where(and_(*filters))
         
-        # Order by score (best offers first)
+        # Order by score ascending: lower score = better deal (cheaper, lower mileage, newer)
+        # Listings with no score (missing price/year/mileage) go last.
         query = query.order_by(VehicleListing.score.asc().nullslast())
         
         # Execute query
@@ -186,12 +189,16 @@ class VehicleService:
     
     async def _calculate_score(self, listing: VehicleListing):
         """
-        Calculate best offer score for a listing.
+        Calculate best offer score for a single listing (used during save).
+        Scores are rough at this point; _recalculate_all_scores() corrects them
+        after all scrapers finish.
         
-        Lower score = better offer
+        Score weights:
+          price    50%  — lower price  → lower score → ranked higher
+          mileage  30%  — lower km     → lower score → ranked higher
+          year     20%  — newer year   → lower score → ranked higher
         """
         try:
-            # Get min/max values for normalization
             result = await self.db.execute(
                 select(
                     func.min(VehicleListing.price).label('min_price'),
@@ -203,45 +210,108 @@ class VehicleService:
                 )
             )
             stats = result.one()
-            
-            # Normalize values (0-1 scale)
-            if stats.min_price and stats.max_price and stats.max_price > stats.min_price:
-                listing.price_normalized = (
-                    (listing.price - stats.min_price) / (stats.max_price - stats.min_price)
-                )
-            
-            if listing.mileage and stats.min_mileage and stats.max_mileage and stats.max_mileage > stats.min_mileage:
-                listing.mileage_normalized = (
-                    (listing.mileage - stats.min_mileage) / (stats.max_mileage - stats.min_mileage)
-                )
-            
-            if listing.year and stats.min_year and stats.max_year and stats.max_year > stats.min_year:
-                # For year, newer is better, so invert
-                listing.year_normalized = 1 - (
-                    (listing.year - stats.min_year) / (stats.max_year - stats.min_year)
-                )
-            
-            # Calculate weighted score
-            score = 0
-            weight_sum = 0
-            
-            if listing.price_normalized is not None:
-                score += listing.price_normalized * 0.5
-                weight_sum += 0.5
-            
-            if listing.mileage_normalized is not None:
-                score += listing.mileage_normalized * 0.3
-                weight_sum += 0.3
-            
-            if listing.year_normalized is not None:
-                score += listing.year_normalized * 0.2
-                weight_sum += 0.2
-            
-            if weight_sum > 0:
-                listing.score = score / weight_sum
-            
+            self._apply_score(listing, stats)
             await self.db.commit()
-            
+        except Exception:
+            await self.db.rollback()
+
+    def _apply_score(self, listing: VehicleListing, stats) -> None:
+        """
+        Apply normalized score to a listing given pre-fetched global stats.
+        All normalizations produce 0 = best, 1 = worst.
+        """
+        # Price: 0 = cheapest (best), 1 = most expensive (worst)
+        if (
+            listing.price is not None
+            and stats.min_price is not None
+            and stats.max_price is not None
+            and stats.max_price > stats.min_price
+        ):
+            listing.price_normalized = (
+                (listing.price - stats.min_price)
+                / (stats.max_price - stats.min_price)
+            )
+        else:
+            listing.price_normalized = None
+
+        # Mileage: 0 = fewest km (best), 1 = most km (worst)
+        if (
+            listing.mileage is not None
+            and stats.min_mileage is not None
+            and stats.max_mileage is not None
+            and stats.max_mileage > stats.min_mileage
+        ):
+            listing.mileage_normalized = (
+                (listing.mileage - stats.min_mileage)
+                / (stats.max_mileage - stats.min_mileage)
+            )
+        else:
+            listing.mileage_normalized = None
+
+        # Year: 0 = newest (best), 1 = oldest (worst)  — intentionally inverted
+        if (
+            listing.year is not None
+            and stats.min_year is not None
+            and stats.max_year is not None
+            and stats.max_year > stats.min_year
+        ):
+            listing.year_normalized = 1 - (
+                (listing.year - stats.min_year)
+                / (stats.max_year - stats.min_year)
+            )
+        else:
+            listing.year_normalized = None
+
+        # Weighted average — only include dimensions that have a value
+        score = 0.0
+        weight_sum = 0.0
+
+        if listing.price_normalized is not None:
+            score += listing.price_normalized * 0.5
+            weight_sum += 0.5
+
+        if listing.mileage_normalized is not None:
+            score += listing.mileage_normalized * 0.3
+            weight_sum += 0.3
+
+        if listing.year_normalized is not None:
+            score += listing.year_normalized * 0.2
+            weight_sum += 0.2
+
+        listing.score = (score / weight_sum) if weight_sum > 0 else None
+
+    async def _recalculate_all_scores(self) -> None:
+        """
+        Recalculate scores for ALL listings in one pass.
+
+        This must be called AFTER all scrapers have finished so that the
+        global min/max values are accurate across the full result set.
+        Scores calculated during incremental saving are inaccurate because
+        each new listing changes the min/max for every other listing.
+        """
+        try:
+            # Fetch global stats once
+            stats_result = await self.db.execute(
+                select(
+                    func.min(VehicleListing.price).label('min_price'),
+                    func.max(VehicleListing.price).label('max_price'),
+                    func.min(VehicleListing.mileage).label('min_mileage'),
+                    func.max(VehicleListing.mileage).label('max_mileage'),
+                    func.min(VehicleListing.year).label('min_year'),
+                    func.max(VehicleListing.year).label('max_year'),
+                )
+            )
+            stats = stats_result.one()
+
+            # Fetch all listings
+            result = await self.db.execute(select(VehicleListing))
+            listings = result.scalars().all()
+
+            # Apply score to each listing using the same global stats
+            for listing in listings:
+                self._apply_score(listing, stats)
+
+            await self.db.commit()
         except Exception:
             await self.db.rollback()
     

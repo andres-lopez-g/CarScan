@@ -27,32 +27,34 @@ export default function Home() {
   const [listings, setListings] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [hasSearched, setHasSearched] = useState(false);
+  const [nationwide, setNationwide] = useState(false);
 
-  const handleSearch = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const runSearch = async (nationwide: boolean) => {
     setLoading(true);
     setError("");
     setListings([]);
+
+    // When nationwide=false we do a "local" search (no city filter, but could
+    // include user_lat/user_lon in the future). When nationwide=true we
+    // explicitly omit city so the backend doesn't filter by location.
+    const body: any = {
+      query: searchQuery,
+      search_type: searchType,
+      max_distance_km: nationwide ? 5000 : 50,
+    };
 
     try {
       const response = await fetch(
         `${process.env.NEXT_PUBLIC_API_URL}/vehicles/search`,
         {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            query: searchQuery,
-            search_type: searchType,
-            max_distance_km: 50,
-          }),
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
         },
       );
 
-      if (!response.ok) {
-        throw new Error("Search failed");
-      }
+      if (!response.ok) throw new Error("Search failed");
 
       const data = await response.json();
       setListings(data.listings || []);
@@ -62,6 +64,18 @@ export default function Home() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleSearch = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setNationwide(false);
+    setHasSearched(true);
+    await runSearch(false);
+  };
+
+  const handleNationwide = async () => {
+    setNationwide(true);
+    await runSearch(true);
   };
 
   return (
@@ -88,12 +102,8 @@ export default function Home() {
           Car<span className={styles.navLogoAccent}>Scan</span>
         </div>
         <div className={styles.navLinks}>
-          <a href="#search" className={styles.navLink}>
-            Buscar
-          </a>
-          <a href="#features" className={styles.navLink}>
-            Características
-          </a>
+          <a href="#search" className={styles.navLink}>Buscar</a>
+          <a href="#features" className={styles.navLink}>Características</a>
           <a
             href="https://github.com/andres-lopez-g/CarScan"
             target="_blank"
@@ -113,9 +123,7 @@ export default function Home() {
           </span>
 
           <h1 className={styles.title}>
-            {searchType === "vehicles"
-              ? "Encuentra tu próximo"
-              : "Encuentra tu próxima"}
+            {searchType === "vehicles" ? "Encuentra tu próximo" : "Encuentra tu próxima"}
             <br />
             <span className={styles.brand}>
               {searchType === "vehicles" ? "vehículo ideal" : "propiedad ideal"}
@@ -146,7 +154,7 @@ export default function Home() {
             </button>
           </div>
 
-          {/* Search */}
+          {/* Search form */}
           <form onSubmit={handleSearch} className={styles.searchForm}>
             <input
               type="text"
@@ -160,11 +168,7 @@ export default function Home() {
               className={styles.searchInput}
               required
             />
-            <button
-              type="submit"
-              className={styles.searchButton}
-              disabled={loading}
-            >
+            <button type="submit" className={styles.searchButton} disabled={loading}>
               {loading ? "Buscando..." : "Buscar"}
             </button>
           </form>
@@ -175,7 +179,9 @@ export default function Home() {
           <div className={styles.loadingContainer}>
             <div className={styles.spinner} />
             <p className={styles.loadingText}>
-              Buscando en todos los marketplaces...
+              {nationwide
+                ? "Buscando en toda Colombia..."
+                : "Buscando en todos los marketplaces..."}
             </p>
           </div>
         )}
@@ -187,7 +193,14 @@ export default function Home() {
         {listings.length > 0 && (
           <div className={styles.results}>
             <div className={styles.resultsHeader}>
-              <h2>Resultados</h2>
+              <h2>
+                Resultados{" "}
+                {nationwide && (
+                  <span className={styles.nationwideBadge}>
+                    <GlobeIcon size={13} /> Toda Colombia
+                  </span>
+                )}
+              </h2>
               <span className={styles.resultsCount}>
                 {listings.length} anuncios encontrados
               </span>
@@ -212,8 +225,7 @@ export default function Home() {
                     )}
                     {listing.mileage && (
                       <span className={styles.detailTag}>
-                        <RoadIcon size={13} />{" "}
-                        {listing.mileage.toLocaleString()} km
+                        <RoadIcon size={13} /> {listing.mileage.toLocaleString()} km
                       </span>
                     )}
                     {listing.city && (
@@ -229,8 +241,7 @@ export default function Home() {
                   </div>
                   {listing.distance_km && (
                     <p className={styles.distance}>
-                      <RulerIcon size={14} /> {listing.distance_km.toFixed(1)}{" "}
-                      km de distancia
+                      <RulerIcon size={14} /> {listing.distance_km.toFixed(1)} km de distancia
                     </p>
                   )}
                   <a
@@ -244,11 +255,47 @@ export default function Home() {
                 </div>
               ))}
             </div>
+
+            {/* "Expand to all Colombia" — shown below results when NOT already nationwide */}
+            {!nationwide && !loading && (
+              <div className={styles.expandSection}>
+                <p className={styles.expandHint}>
+                  ¿No encontraste lo que buscabas? Amplía la búsqueda a todo el país.
+                </p>
+                <button
+                  type="button"
+                  className={styles.expandButton}
+                  onClick={handleNationwide}
+                  disabled={loading}
+                >
+                  <GlobeIcon size={16} />
+                  Ver ofertas en toda Colombia
+                </button>
+              </div>
+            )}
           </div>
         )}
 
-        {/* Features — shown when no results */}
-        {listings.length === 0 && !loading && (
+        {/* Show expand button when 0 results after a search */}
+        {listings.length === 0 && !loading && hasSearched && !nationwide && (
+          <div className={styles.expandSection}>
+            <p className={styles.expandHint}>
+              No se encontraron resultados locales. ¿Buscamos en toda Colombia?
+            </p>
+            <button
+              type="button"
+              className={styles.expandButton}
+              onClick={handleNationwide}
+              disabled={loading}
+            >
+              <GlobeIcon size={16} />
+              Buscar en toda Colombia
+            </button>
+          </div>
+        )}
+
+        {/* Features section — only shown before the first search */}
+        {!hasSearched && !loading && (
           <section className={styles.featuresSection} id="features">
             <div className={styles.featureCard}>
               <span className={styles.featureIcon}>
@@ -256,8 +303,7 @@ export default function Home() {
               </span>
               <h3 className={styles.featureTitle}>Búsqueda unificada</h3>
               <p className={styles.featureDesc}>
-                Compara precios de TuCarro, MercadoLibre, FincaRaíz y más en una
-                sola búsqueda.
+                Compara precios de TuCarro, MercadoLibre, VendeTuNave y más en una sola búsqueda.
               </p>
             </div>
             <div className={styles.featureCard}>
@@ -266,8 +312,7 @@ export default function Home() {
               </span>
               <h3 className={styles.featureTitle}>Mapa interactivo</h3>
               <p className={styles.featureDesc}>
-                Visualiza los listados geolocalizados cerca de ti en un mapa
-                interactivo en tiempo real.
+                Visualiza los listados geolocalizados cerca de ti en un mapa interactivo en tiempo real.
               </p>
             </div>
             <div className={styles.featureCard}>
@@ -276,8 +321,7 @@ export default function Home() {
               </span>
               <h3 className={styles.featureTitle}>Resultados al instante</h3>
               <p className={styles.featureDesc}>
-                Scraping en tiempo real de múltiples fuentes para que siempre
-                tengas los datos más frescos.
+                Scraping en tiempo real de múltiples fuentes para que siempre tengas los datos más frescos.
               </p>
             </div>
           </section>
